@@ -8,7 +8,7 @@ from gaussfft import gaussfft
 from fftwave import fftwave
 
 
-exercise = "1.8"
+exercise = "2.3"
 
 
 if exercise == "1.3":
@@ -205,3 +205,52 @@ if exercise == "1.8":
 
 		else:
 			print(f"Image {img_path} not found.")
+
+
+if exercise == "2.3":
+	from Functions import deltafcn,variance
+	from gaussfft import gaussfft
+
+	"""执行高斯卷积分析，包括脉冲响应和图像平滑效果展示。"""
+
+	# Different parameters for test
+	t_values = {
+		"variance_test": [0.1, 0.3, 1.0, 10.0, 100.0],
+		"blur_test": [1.0, 4.0, 16.0, 64.0, 256.0]
+	}
+	img = np.load("Images-npy/genevepark128.npy")
+
+	# Analyzing impulse respons and covariances
+	fig1, axs1 = plt.subplots(1, 5, figsize=(15, 3))
+	fig1.subplots_adjust(wspace=0.3)
+	plt.rc('axes', titlesize=10)
+
+	for i, t in enumerate(t_values["variance_test"]):
+		psf = gaussfft(deltafcn(128, 128), t)
+		var = variance(psf)
+		var = [[round(j, 3) for j in var[i]] for i in range(len(var))]
+
+		print(f"Variance for t={t}: {var:}")
+
+		# Impulse respons visualization
+		ax_img = axs1[i]
+		ax_img.imshow(psf, cmap='gray')
+		ax_img.set_title(f'Impulse respons visualization:\nt={t}\nvar={var:}')
+		ax_img.axis('off')
+	
+
+	# Analyzing image bluring effect
+	fig2, axs2 = plt.subplots(1, 5, figsize=(15, 3))
+	fig2.subplots_adjust(wspace=0.3)
+	plt.rc('axes', titlesize=10)
+
+	for i, t in enumerate(t_values["blur_test"]):
+		blurred_img = gaussfft(img, t)
+
+		# Blurred image visualization
+		ax = axs2[i]
+		ax.imshow(blurred_img, cmap='gray')
+		ax.set_title(f't={t}')
+		ax.axis('off')
+
+	plt.show()
