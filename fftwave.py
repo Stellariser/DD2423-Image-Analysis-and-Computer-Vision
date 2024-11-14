@@ -17,6 +17,10 @@ def fftwave(u, v, sz = 128):
 	a1.title.set_text("Fhat: (u, v) = (%d, %d)" % (u, v))
 	
 	# What is done by these instructions?
+	# This block of code calculates “wrapped coordinates” (uc, vc) for the indices (u, v) in the Fourier domain. 
+	# The transformation essentially re-centers the frequency coordinates for more intuitive visualization, adjusting for the symmetry in DFT. 
+	# It uses the fact that low frequencies are centered, while high frequencies are shifted to the edges. 
+	# For indices greater than half the size, the code subtracts the size to reflect negative frequencies, so they range from -sz/2 to sz/2.
 	if u < sz/2:
 		uc = u
 	else:
@@ -26,11 +30,11 @@ def fftwave(u, v, sz = 128):
 	else:
 		vc = v - sz
 
-	wavelength = 0.0 # Replace by correct expression
-	amplitude  = 0.0 # Replace by correct expression
+	wavelength = 1 / np.sqrt(uc**2 + vc**2) if uc != 0 or vc != 0 else 0
+	amplitude  = 1.0 / sz
 	
 	a2 = f.add_subplot(3, 2, 2)
-	showgrey(np.fft.fftshift(Fhat), False)
+	showgrey(np.fft.fftshift(Fhat), False)  # Shift the zero-frequency component to the center of the spectrum
 	a2.title.set_text("centered Fhat: (uc, vc) = (%d, %d)" % (uc, vc))
 	
 	a3 = f.add_subplot(3, 2, 3)
