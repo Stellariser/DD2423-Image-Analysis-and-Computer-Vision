@@ -8,13 +8,38 @@ from gaussfft import gaussfft
 from fftwave import fftwave
 
 
-exercise = "2.3"
+exercise = "1.3"
 
 
 if exercise == "1.3":
 	coordinates = [(5, 9), (9, 5), (17, 9), (17, 121), (5, 1), (125, 1)]
 	for u, v in coordinates:
 		fftwave(u, v)
+
+	# ---------------------------------------------------------------------- #
+
+	Fhat = np.zeros([128, 128])
+	Fhat[-3, 1] = 1
+	
+	# Perform inverse FFT with and without fftshift
+	F = np.fft.ifft2(np.fft.fftshift(Fhat))  # Inverse FFT with wrapping
+	F_wrapped = np.fft.ifft2(Fhat)  # Inverse FFT without wrapping
+	
+	f = plt.figure()
+	f.subplots_adjust(wspace=0.2, hspace=0.4)
+	plt.rc('axes', titlesize=10)
+
+	a1 = f.add_subplot(2, 1, 1)
+	showgrey(np.real(F), False)
+	a1.title.set_text("F without wrapped coordinates")
+	
+
+	a2 = f.add_subplot(2, 1, 2)
+	showgrey(np.real(F_wrapped), False) 
+	a2.title.set_text("F with wrapped coordinates")
+
+	plt.show()
+	
 
 
 if exercise == "1.4":
@@ -253,4 +278,129 @@ if exercise == "2.3":
 		ax.set_title(f't={t}')
 		ax.axis('off')
 
+	plt.show()
+
+
+if exercise == "3.1":
+	from Functions import gaussnoise, sapnoise, discgaussfft, medfilt, ideal
+
+	# Create two noisy images 
+	office = np.load("Images-npy/office256.npy")
+	original = office.copy()
+	add = gaussnoise(office, 16)
+	sap = sapnoise(office, 0.1, 255)
+
+	f = plt.figure()
+	f.subplots_adjust(wspace=0.2, hspace=0.4)
+	plt.rc('axes', titlesize=10)
+
+	a1 = f.add_subplot(1, 3, 1)
+	showgrey(original, False)
+	a1.title.set_text("Original image")
+
+	a2 = f.add_subplot(1, 3, 2)
+	showgrey(add, False)
+	a2.title.set_text("Image with Gaussian noise")
+
+	a3 = f.add_subplot(1, 3, 3)
+	showgrey(sap, False)
+	a3.title.set_text("Image with salt-and-peppar noise")
+
+	plt.show()
+
+
+	# 1. Gaussian smoothing
+	t_values = [0.1, 0.3, 0.5, 1.0, 2.0, 10.0]
+
+	fig, axs = plt.subplots(2, len(t_values), figsize=(15, 6))
+	fig.suptitle("Gaussian Smoothing with Different t Values")
+	for i, t in enumerate(t_values):
+		# 对带高斯噪声图像进行高斯平滑
+		smoothed_add = discgaussfft(add, t)
+		axs[0, i].imshow(smoothed_add, cmap='gray')
+		axs[0, i].set_title(f"gaussnoise, t={t}")
+		axs[0, i].axis('off')
+
+		# 对带椒盐噪声图像进行高斯平滑
+		smoothed_sap = discgaussfft(sap, t)
+		axs[1, i].imshow(smoothed_sap, cmap='gray')
+		axs[1, i].set_title(f"sapnoise, t={t}")
+		axs[1, i].axis('off')
+
+	plt.tight_layout()
+	plt.show()
+
+
+	# 2. Median filtering
+	window_sizes = [1, 3, 5, 7, 9, 11]
+
+	fig, axs = plt.subplots(2, len(window_sizes), figsize=(15, 6))
+	fig.suptitle("Median Filtering with Different Window Sizes")
+	for i, w in enumerate(window_sizes):
+		# 对带高斯噪声图像进行中值滤波
+		smoothed_add = medfilt(add, w)
+		axs[0, i].imshow(smoothed_add, cmap='gray')
+		axs[0, i].set_title(f"gaussnoise, w={w}")
+		axs[0, i].axis('off')
+
+		# 对带椒盐噪声图像进行中值滤波
+		smoothed_sap = medfilt(sap, w)
+		axs[1, i].imshow(smoothed_sap, cmap='gray')
+		axs[1, i].set_title(f"sapnoise, w={w}")
+		axs[1, i].axis('off')
+
+	plt.tight_layout()
+	plt.show()
+
+	# 3. Ideal low-pass filtering
+	cutoff_frequencies = [0.01, 0.05, 0.1, 0.2, 0.5, 1.0]
+
+	fig, axs = plt.subplots(2, len(cutoff_frequencies), figsize=(15, 6))
+	fig.suptitle("Ideal Low-Pass Filtering with Different Cut-Off Frequencies")
+	for i, c in enumerate(cutoff_frequencies):
+		# 对带高斯噪声图像进行理想低通滤波
+		smoothed_add = ideal(add, c)
+		axs[0, i].imshow(smoothed_add, cmap='gray')
+		axs[0, i].set_title(f"gaussnoise, cut-off={c}")
+		axs[0, i].axis('off')
+
+		# 对带椒盐噪声图像进行理想低通滤波
+		smoothed_sap = ideal(sap, c)
+		axs[1, i].imshow(smoothed_sap, cmap='gray')
+		axs[1, i].set_title(f"sapnoise, cut-off={c}")
+		axs[1, i].axis('off')
+
+	plt.tight_layout()
+	plt.show()
+
+
+if exercise == "3.2":
+	from gaussfft import gaussfft
+	from Functions import ideal, rawsubsample
+
+	img = np.load("Images-npy/phonecalc256.npy") 
+	smoothimg_gaussian = img.copy()
+	smoothimg_ideal = img.copy()
+    
+	N = 5  # Number of downsampling
+	# Filter parameters
+	gaussian_t = 4
+	ideal_cutoff = 0.2
+
+	f = plt.figure()
+	f.subplots_adjust(wspace=0, hspace=0)
+	for i in range(N):
+		if i > 0: # generate subsampled versions
+			img = rawsubsample(img)
+			smoothimg_gaussian = gaussfft(smoothimg_gaussian, gaussian_t)
+			smoothimg_gaussian = rawsubsample(smoothimg_gaussian)
+			smoothimg_ideal = ideal(smoothimg_ideal, ideal_cutoff)
+			smoothimg_ideal = rawsubsample(smoothimg_ideal)
+
+		f.add_subplot(3, N, i + 1)
+		showgrey(img, False)
+		f.add_subplot(3, N, i + N + 1)
+		showgrey(smoothimg_gaussian, False)
+		f.add_subplot(3, N, i + 2*N + 1)
+		showgrey(smoothimg_ideal, False)
 	plt.show()
