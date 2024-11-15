@@ -31,7 +31,7 @@ def fftwave(u, v, sz = 128):
 		vc = v - sz
 
 	wavelength = 1 / np.sqrt(uc**2 + vc**2) if uc != 0 or vc != 0 else 0
-	amplitude  = 1.0 / sz
+	amplitude  = 1.0 / sz * sz
 	
 	a2 = f.add_subplot(3, 2, 2)
 	showgrey(np.fft.fftshift(Fhat), False)  # Shift the zero-frequency component to the center of the spectrum
