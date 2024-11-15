@@ -16,29 +16,32 @@ if exercise == "1.3":
 	for u, v in coordinates:
 		fftwave(u, v)
 
-	# ---------------------------------------------------------------------- #
+	# # 初始化頻譜矩陣
+	# Fhat = np.zeros([128, 128], dtype=complex)
 
-	Fhat = np.zeros([128, 128])
-	Fhat[-3, 1] = 1
-	
-	# Perform inverse FFT with and without fftshift
-	F = np.fft.ifft2(np.fft.fftshift(Fhat))  # Inverse FFT with wrapping
-	F_wrapped = np.fft.ifft2(Fhat)  # Inverse FFT without wrapping
-	
-	f = plt.figure()
-	f.subplots_adjust(wspace=0.2, hspace=0.4)
-	plt.rc('axes', titlesize=10)
+	# # 在頻譜中設置 (125, 1) 的頻率成分
+	# Fhat[125, 1] = 1  # 不包裝下的位置
 
-	a1 = f.add_subplot(2, 1, 1)
-	showgrey(np.real(F), False)
-	a1.title.set_text("F without wrapped coordinates")
-	
+	# # 執行逆傅立葉變換
+	# F_unwrapped = np.fft.ifft2(Fhat)  # 不包裝的情況
+	# F_wrapped = np.fft.ifft2(np.fft.fftshift(Fhat))  # 包裝的情況
 
-	a2 = f.add_subplot(2, 1, 2)
-	showgrey(np.real(F_wrapped), False) 
-	a2.title.set_text("F with wrapped coordinates")
+	# # 可視化結果
+	# f = plt.figure(figsize=(10, 6))
+	# f.subplots_adjust(wspace=0.4, hspace=0.4)
+	# plt.rc('axes', titlesize=12)
 
-	plt.show()
+	# # 顯示不包裝頻譜的逆變換結果
+	# a1 = f.add_subplot(2, 1, 1)
+	# showgrey(np.real(F_unwrapped), False)
+	# a1.title.set_text("Inverse FFT without wrapping (High-Frequency Pattern)")
+
+	# # 顯示包裝頻譜的逆變換結果
+	# a2 = f.add_subplot(2, 1, 2)
+	# showgrey(np.real(F_wrapped), False)
+	# a2.title.set_text("Inverse FFT with wrapping (Low-Frequency Pattern)")
+
+	# plt.show()
 	
 
 
