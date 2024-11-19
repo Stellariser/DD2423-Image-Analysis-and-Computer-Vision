@@ -1,29 +1,25 @@
 import numpy as np
-#from numpy.fft import fft2, ifft2, fftshift
+from numpy.fft import fft2, ifft2, fftshift
 from scipy.signal import convolve2d, correlate2d
 import matplotlib.pyplot as plt
 
 from Functions import *
 from gaussfft import gaussfft
-
-# Either write your code in a file like this or use a Jupyter notebook.
-#
-# A good idea is to use switches, so that you can turn things on and off
-# depending on what you are working on. It should be fairly easy for a TA
-# to go through all parts of your code though.
-
-# Exercise 1
-if 0:
-	print("That was a stupid idea")
         
         
 def deltax():
-        # ....
-        return dxmask
+    # Sobel operator
+    dxmask = np.array([[-1,  0,  1],
+                       [-2,  0,  2],
+                       [-1,  0,  1]]) / 8
+    return dxmask
 
 def deltay():
-        # ....
-        return dymask
+    # Sobel operator
+    dymask = np.array([[-1, -2, -1],
+                       [ 0,  0,  0],
+                       [ 1,  2,  1]]) / 8
+    return dymask
 
 def Lv(inpic, shape = 'same'):
         # ...
@@ -49,3 +45,29 @@ def houghedgeline(pic, scale, gradmagnthreshold, nrho, ntheta, nlines = 20, verb
         # ...
         return linepar, acc
          
+
+exercise = "1"
+
+
+if exercise == "1":
+    tools = np.load("Images-npy/few256.npy")
+    dxtools = convolve2d(tools, deltax(), 'valid')
+    dytools = convolve2d(tools, deltay(), 'valid')
+
+    f = plt.figure()
+    f.subplots_adjust(wspace=0.2, hspace=0.4)
+    plt.rc('axes', titlesize=10)
+
+    a1 = f.add_subplot(1, 3, 1)
+    showgrey(tools, False)
+    a1.title.set_text("Original figure")
+
+    a2 = f.add_subplot(1, 3, 2)
+    showgrey(dxtools, False)
+    a2.title.set_text("Derivative in the x direction")
+
+    a3 = f.add_subplot(1, 3, 3)
+    showgrey(dytools, False)
+    a3.title.set_text("Derivative in the y direction")
+
+    plt.show()
