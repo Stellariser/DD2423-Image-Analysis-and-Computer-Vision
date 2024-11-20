@@ -64,8 +64,31 @@ def Lvvvtilde(inpic, shape = 'same'):
         return (Lx**3) * Lxxx + 3 * (Lx**2) * Ly * Lxxy + 3 * Lx * (Ly**2) * Lxyy + (Ly**3) * Lyyy
 
 def extractedge(inpic, scale, threshold, shape):
-        # ...
-        return contours
+    # Step 1: Smooth the input image using Gaussian smoothing
+    smoothed_image = discgaussfft(inpic, scale)
+
+    # Step 2: Compute the second-order directional derivative (Lvv~)
+    Lvv = Lvvtilde(smoothed_image, shape)
+
+    # Step 3: Compute the third-order directional derivative (Lvvv~)
+    Lvvv = Lvvvtilde(smoothed_image, shape)
+
+    # Step 4: Create a mask from the sign condition (Lvvv < 0)
+    Lvvv_mask = (Lvvv < 0)
+
+    # Step 5: Detect zero-crossing curves in Lvv~, filtered by the Lvvv mask
+    edge_curves = zerocrosscurves(Lvv, Lvvv_mask)
+
+    # Step 6: Compute the gradient magnitude of the smoothed image
+    gradient_magnitude = Lv(smoothed_image, shape)
+
+    # Step 7: Create a mask by thresholding the gradient magnitude
+    gradient_mask = (gradient_magnitude > threshold)
+
+    # Step 8: Refine the zero-crossing curves using the gradient magnitude mask
+    edge_curves = thresholdcurves(edge_curves, gradient_mask)
+
+    return edge_curves
         
 def houghline(curves, magnitude, nrho, ntheta, threshold, nlines = 20, verbose = False):
         # ...
@@ -76,7 +99,7 @@ def houghedgeline(pic, scale, gradmagnthreshold, nrho, ntheta, nlines = 20, verb
         return linepar, acc
          
 
-exercise = "3"
+exercise = "5"
 
 
 if exercise == "1":
@@ -179,7 +202,7 @@ if exercise == "2":
     plt.show()
 
 
-if exercise == "3":
+if exercise == "4":
     # # Derivative verification
     # dx = np.array([[0.5, 0, -0.5]])
     # dxx = np.array([[1, -2, 1]])
@@ -227,8 +250,60 @@ if exercise == "3":
         ax = f.add_subplot(2, 3, i + 2)
         showgrey((Lvvvtilde(discgaussfft(tools, scale), 'same')<0).astype(int), False)
         ax.set_title(f"Scale = {scale}")
-        
+
     plt.show()
 
 
+if exercise == "5":
+    house = np.load("Images-npy/godthem256.npy")
+    tools = np.load("Images-npy/few256.npy")
+
+    scales = [0.0001, 1.0, 4.0, 16.0, 64.0]
     
+    f = plt.figure()
+    f.subplots_adjust(wspace=0.2, hspace=0.4)
+    plt.rc('axes', titlesize=10)
+    
+    ax = f.add_subplot(2, 3, 1)
+    showgrey(tools, False)
+    ax.set_title(f"Original Image")
+    for i, scale in enumerate(scales):
+        ax = f.add_subplot(2, 3, i + 2)
+        edgecurves = extractedge(tools, scale, 0, 'same')
+        overlaycurves(tools, edgecurves)
+        ax.set_title(f"Scale = {scale}")
+    
+    plt.show()
+    # --------------------------------------------- #
+    thresholds = [1, 3, 5, 7, 9, 11]
+
+    f = plt.figure()
+    f.subplots_adjust(wspace=0.2, hspace=0.4)
+    plt.rc('axes', titlesize=10)
+    f.suptitle("Thresholded Images with Scale = 4", fontsize=16)
+    
+    for i, threshold in enumerate(thresholds):
+        ax = f.add_subplot(2, 3, i + 1)
+        edgecurves = extractedge(tools, 4, threshold, 'same')
+        overlaycurves(tools, edgecurves)
+        ax.set_title(f"Threshold = {threshold}")
+    
+    plt.show()
+    # --------------------------------------------- #
+    # Best results:
+    f = plt.figure()
+    f.subplots_adjust(wspace=0.2, hspace=0.4)
+    plt.rc('axes', titlesize=10)
+    f.suptitle("Best results", fontsize=16)
+    
+    a1 = f.add_subplot(1, 2, 1)
+    edgecurves_house = extractedge(house, 4, 7, 'same')
+    overlaycurves(house, edgecurves_house)
+    a1.set_title("House with scale=4 and threshold=7")
+
+    a2 = f.add_subplot(1, 2, 2)
+    edgecurves_tools = extractedge(tools, 4, 7, 'same')
+    overlaycurves(tools, edgecurves_tools)
+    a2.set_title("Tools with scale=4 and threshold=7")
+    
+    plt.show()
