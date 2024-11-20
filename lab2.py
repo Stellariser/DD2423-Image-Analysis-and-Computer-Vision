@@ -27,12 +27,41 @@ def Lv(inpic, shape = 'same'):
     return np.sqrt(Lx**2 + Ly**2)
 
 def Lvvtilde(inpic, shape = 'same'):
-        # ...
-        return result
+        # Central difference approximations
+        dx = np.array([[0.5, 0, -0.5]])
+        dy = np.array([[0.5], [0], [-0.5]])
+
+        dxx = np.array([[1, -2, 1]])
+        dyy = np.array([[1], [-2], [1]])
+
+        Lx = convolve2d(inpic, dx, shape)
+        Ly = convolve2d(inpic, dy, shape)
+        Lxx = convolve2d(inpic, dxx, shape) 
+        Lyy = convolve2d(inpic, dyy, shape)
+        Lxy = convolve2d(Lx, dy, shape)
+
+        return (Lx**2) * Lxx + 2 * Lx * Ly * Lxy + (Ly**2) * Lyy
 
 def Lvvvtilde(inpic, shape = 'same'):
-        # ...
-        return result
+        # Central difference approximations
+        dx = np.array([[0.5, 0, -0.5]])
+        dy = np.array([[0.5], [0], [-0.5]])
+
+        dxx = np.array([[1, -2, 1]])
+        dyy = np.array([[1], [-2], [1]])
+
+        Lx = convolve2d(inpic, dx, shape)
+        Ly = convolve2d(inpic, dy, shape) 
+        Lxx = convolve2d(inpic, dxx, shape) 
+        Lyy = convolve2d(inpic, dyy, shape) 
+        Lxy = convolve2d(Lx, dy, shape)
+
+        Lxxx = convolve2d(Lxx, dx, shape)
+        Lyyy = convolve2d(Lyy, dy, shape)
+        Lxxy = convolve2d(Lxy, dx, shape)
+        Lxyy = convolve2d(Lxy, dy, shape)
+
+        return (Lx**3) * Lxxx + 3 * (Lx**2) * Ly * Lxxy + 3 * Lx * (Ly**2) * Lxyy + (Ly**3) * Lyyy
 
 def extractedge(inpic, scale, threshold, shape):
         # ...
@@ -47,7 +76,7 @@ def houghedgeline(pic, scale, gradmagnthreshold, nrho, ntheta, nlines = 20, verb
         return linepar, acc
          
 
-exercise = "2"
+exercise = "3"
 
 
 if exercise == "1":
@@ -76,13 +105,13 @@ if exercise == "1":
 
 if exercise == "2":
     tools = np.load("Images-npy/few256.npy")
-    tools_smoothed = gaussfft(tools, 3)
+    tools_smoothened = gaussfft(tools, 3)
 
     gradmagntools = Lv(tools)
-    gradmagntools_smoothed = Lv(tools_smoothed)
+    gradmagntools_smoothened = Lv(tools_smoothened)
 
     hist, bins = np.histogram(gradmagntools, bins=256)
-    hist_smoothed, bins_smoothed = np.histogram(gradmagntools_smoothed, bins=256)
+    hist_smoothened, bins_smoothened = np.histogram(gradmagntools_smoothened, bins=256)
 
     # --------------------------------------------- #
     f = plt.figure()
@@ -106,11 +135,11 @@ if exercise == "2":
     plt.rc('axes', titlesize=10)
 
     a1 = f.add_subplot(1, 2, 1)
-    showgrey(gradmagntools_smoothed, False)
+    showgrey(gradmagntools_smoothened, False)
     a1.set_title("Gradient magnitude with smoothing of the image")   
     
     a2 = f.add_subplot(1, 2, 2)
-    a2.bar(bins_smoothed[:-1], hist_smoothed, width=(bins_smoothed[1] - bins_smoothed[0]), color='blue', alpha=0.7)
+    a2.bar(bins_smoothened[:-1], hist_smoothened, width=(bins_smoothened[1] - bins_smoothened[0]), color='blue', alpha=0.7)
     a2.set_title("Histogram of Gradient Magnitude with smoothing of the image")
     a2.set_xlabel("Gradient Magnitude")
     a2.set_ylabel("Frequency")
@@ -138,15 +167,68 @@ if exercise == "2":
     f = plt.figure()
     f.subplots_adjust(wspace=0.2, hspace=0.4)
     plt.rc('axes', titlesize=10)
-    f.suptitle("Thresholded Smoothed Images with Different Thresholds", fontsize=16)
+    f.suptitle("Thresholded Smoothened Images with Different Thresholds", fontsize=16)
     
     for i, threshold in enumerate(thresholds):
-        thresholded_image_smoothed = (gradmagntools_smoothed > threshold).astype(int)
+        thresholded_image_smoothened = (gradmagntools_smoothened > threshold).astype(int)
 
         ax = f.add_subplot(3, 2, i + 1)
-        showgrey(thresholded_image_smoothed, False)
+        showgrey(thresholded_image_smoothened, False)
         ax.set_title(f"Threshold = {threshold}")
     
     plt.show()
+
+
+if exercise == "3":
+    # # Derivative verification
+    # dx = np.array([[0.5, 0, -0.5]])
+    # dxx = np.array([[1, -2, 1]])
+    
+    # [x, y] = np.meshgrid(range(-5, 6), range(-5, 6))  # Coordinate grid
+    # poly1 = x**3  # Polynomial x^3
+    # poly2 = x**3 * y  # Polynomial x^3 * y
+
+    # result1 = convolve2d(poly1, dx, mode='same')
+    # result2 = convolve2d(poly1, dxx, mode='same')
+    # result3 = convolve2d(result2, dx, mode='same')
+    # result4 = convolve2d(poly2, dx, mode='same')
+    # print("Convolution with δx on x^3: \n", result1)
+    # print("Convolution with δxx on x^3: \n", result2)
+    # print("Convolution with δxxx on x^3: \n", result3)
+    # print("Convolution with δx on x^3 * y: \n", result4)
+ 
+    house = np.load("Images-npy/godthem256.npy")
+    scales = [0.0001, 1.0, 4.0, 16.0, 64.0]
+    
+    f = plt.figure()
+    f.subplots_adjust(wspace=0.2, hspace=0.4)
+    plt.rc('axes', titlesize=10)
+    
+    ax = f.add_subplot(2, 3, 1)
+    showgrey(house, False)
+    ax.set_title(f"Original Image")
+    for i, scale in enumerate(scales):
+        ax = f.add_subplot(2, 3, i + 2)
+        showgrey(contour(Lvvtilde(discgaussfft(house, scale), 'same')), False)
+        ax.set_title(f"Scale = {scale}")
+    
+    plt.show()
+    # --------------------------------------------- #
+    tools = np.load("Images-npy/few256.npy")
+
+    f = plt.figure()
+    f.subplots_adjust(wspace=0.2, hspace=0.4)
+    plt.rc('axes', titlesize=10)
+    
+    ax = f.add_subplot(2, 3, 1)
+    showgrey(tools, False)
+    ax.set_title(f"Original Image")
+    for i, scale in enumerate(scales):
+        ax = f.add_subplot(2, 3, i + 2)
+        showgrey((Lvvvtilde(discgaussfft(tools, scale), 'same')<0).astype(int), False)
+        ax.set_title(f"Scale = {scale}")
+        
+    plt.show()
+
 
     
