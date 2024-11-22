@@ -91,15 +91,102 @@ def extractedge(inpic, scale, threshold, shape):
     return edge_curves
         
 def houghline(curves, magnitude, nrho, ntheta, threshold, nlines = 20, verbose = False):
-        # ...
-        return linepar, acc
+    """
+    Performs the Hough transform for detecting straight lines in an image.
+
+    Arguments:
+    - curves: Edge points as a tuple (Y, X) from edge detection.
+    - magnitude: Gradient magnitude image.
+    - nrho: Number of accumulators in the rho direction.
+    - ntheta: Number of accumulators in the theta direction.
+    - threshold: Minimum magnitude value for valid points.
+    - nlines: Number of strongest lines to extract.
+    - verbose: Denotes the degree of extra information and figures that will be shown.
+
+    Returns:
+    - linepar: A list of (ρ, θ) parameters for each line segment [(rho1, theta1), (rho2, theta2), ...].
+    - acc: Accumulator matrix of the Hough transform.
+    """
+    # Step 1: Allocate accumulator space
+    acc = np.zeros((nrho, ntheta))  # Accumulator array for (rho, theta)
+    thetas = np.linspace(-np.pi/2, np.pi/2, ntheta)  # Theta values in radians
+    diag_len = np.sqrt(magnitude.shape[0]**2 + magnitude.shape[1]**2)  # Max rho
+    rhos = np.linspace(-diag_len, diag_len, nrho)  # Rho values
+
+    # Step 2: Loop over all edge points
+    Y, X = curves  # Extract edge points
+    for y, x in zip(Y, X):
+        # Check if the gradient magnitude exceeds the threshold
+        if magnitude[int(y), int(x)] > threshold:
+            # Loop through theta values to compute rho
+            for theta_idx, theta in enumerate(thetas):
+                rho = x * np.cos(theta) + y * np.sin(theta)  # Compute rho
+                # Map rho to its index in the accumulator
+                rho_idx = int(np.round((rho + diag_len) * (nrho - 1) / (2 * diag_len)))
+                # Update the accumulator
+                acc[rho_idx, theta_idx] += 1
+
+    # Step 3: Find local maxima in the accumulator
+    flat_indices = np.argsort(-acc.flatten())  # Sort accumulator values descending
+    strongest_indices = flat_indices[:nlines]  # Top nlines indices
+
+    # Step 4: Map the strongest responses to (rho, theta)
+    linepar = []
+    for idx in strongest_indices:
+        rho_idx, theta_idx = np.unravel_index(idx, acc.shape)  # Map back to 2D indices
+        rho = rhos[rho_idx]
+        theta = thetas[theta_idx]
+        linepar.append((rho, theta))
+
+    # Step 5: (Optional) Debugging Information
+    if verbose:
+        print(f"Accumulator shape: {acc.shape}")
+        print(f"Detected lines: {linepar}")
+
+    # Return the detected line parameters and the accumulator
+    return linepar, acc
 
 def houghedgeline(pic, scale, gradmagnthreshold, nrho, ntheta, nlines = 20, verbose = False):
-        # ...
-        return linepar, acc
+    # Extract edges and compute gradient magnitude
+    curves = extractedge(pic, scale, gradmagnthreshold, 'same')  # Edge detection
+    magnitude = Lv(pic, 'same')  # Compute gradient magnitude
+
+    # Perform Hough transform and get line parameters
+    linepar, acc = houghline(curves, magnitude, nrho, ntheta, gradmagnthreshold, nlines, verbose)
+
+    # Diagonal length of the image (used for visualization limits)
+    diag_len = np.sqrt(pic.shape[0]**2 + pic.shape[1]**2)
+
+    # Visualization based on verbose level
+    if verbose == 0:
+        print(linepar)
+        print(acc)
+
+    elif verbose == 1:
+        f = plt.figure()
+        f.subplots_adjust(wspace=0.2, hspace=0.4)
+        plt.rc('axes', titlesize=10)
+
+        a1 = f.add_subplot(1, 3, 1)
+        showgrey(pic, False)
+        a1.set_title("Original Image") 
+
+        a2 = f.add_subplot(1, 3, 2)
+        overlaycurves(pic, curves)
+        a2.set_title("Overlay Curves: Image + Curves") 
+
+        a3 = f.add_subplot(1, 3, 3)
+        showgrey(magnitude, False)
+        a3.set_title("Gradient Magnitude") 
+        
+        plt.show()
+
+
+    # Return detected line parameters and accumulator
+    return linepar, acc
          
 
-exercise = "5"
+exercise = "6"
 
 
 if exercise == "1":
@@ -307,3 +394,17 @@ if exercise == "5":
     a2.set_title("Tools with scale=4 and threshold=7")
     
     plt.show()
+
+
+if exercise == "6":
+    testimage1 = np.load("Images-npy/triangle128.npy")
+    smalltest1 = binsubsample(testimage1)
+
+    testimage2 = np.load("Images-npy/houghtest256.npy")
+    smalltest2 = binsubsample(binsubsample(testimage2))
+
+    print(smalltest1.shape[0])
+    print(smalltest1.shape[1])
+
+    houghedgeline(smalltest1, 4, 0, 64, 180, 20, 0)
+   
