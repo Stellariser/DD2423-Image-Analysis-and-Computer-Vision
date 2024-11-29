@@ -6,7 +6,14 @@ import matplotlib.pyplot as plt
 from Functions import *
 from gaussfft import gaussfft
         
-        
+exercise = "6"
+
+# 1 Q1
+# 2 Q2,3
+# 4 Q4，5，6
+# 5 Q7
+# 6 Q8,9,10
+
 def deltax():
     # Sobel operator
     dxmask = np.array([[-1,  0,  1],
@@ -90,7 +97,7 @@ def extractedge(inpic, scale, threshold, shape):
 
     return edge_curves
         
-def houghline(curves, magnitude, nrho, ntheta, threshold, nlines = 20, verbose = False):
+def houghline(curves, magnitude, nrho, ntheta, threshold, nlines = 20, verbose = False, increment_func=lambda x: 1):
     """
     Performs the Hough transform for detecting straight lines in an image.
 
@@ -117,14 +124,15 @@ def houghline(curves, magnitude, nrho, ntheta, threshold, nlines = 20, verbose =
     Y, X = curves  # Extract edge points
     for y, x in zip(Y, X):
         # Check if the gradient magnitude exceeds the threshold
-        if magnitude[int(y), int(x)] > threshold:
+        grad_value = magnitude[int(y), int(x)]
+        if grad_value > threshold:
             # Loop through theta values to compute rho
             for theta_idx, theta in enumerate(thetas):
                 rho = x * np.cos(theta) + y * np.sin(theta)  # Compute rho
                 # Map rho to its index in the accumulator
                 rho_idx = int(np.round((rho + diag_len) * (nrho - 1) / (2 * diag_len)))
                 # Update the accumulator
-                acc[rho_idx, theta_idx] += 1
+                acc[rho_idx, theta_idx] += increment_func(grad_value)
 
     # Step 3: Find local maxima in the accumulator
     flat_indices = np.argsort(-acc.flatten())  # Sort accumulator values descending
@@ -138,13 +146,21 @@ def houghline(curves, magnitude, nrho, ntheta, threshold, nlines = 20, verbose =
         theta = thetas[theta_idx]
         linepar.append((rho, theta))
 
-    # Step 5: (Optional) Debugging Information
     if verbose:
         print(f"Accumulator shape: {acc.shape}")
         print(f"Detected lines: {linepar}")
 
-    # Return the detected line parameters and the accumulator
     return linepar, acc
+
+def linear_increment(grad_value):
+    return grad_value
+
+def squared_increment(grad_value):
+    return grad_value ** 2
+
+def log_increment(grad_value):
+    return np.log(1 + grad_value)
+
 
 def houghedgeline(pic, scale, gradmagnthreshold, nrho, ntheta, nlines = 20, verbose = False):
     # Extract edges and compute gradient magnitude
@@ -186,12 +202,12 @@ def houghedgeline(pic, scale, gradmagnthreshold, nrho, ntheta, nlines = 20, verb
     return linepar, acc
          
 
-exercise = "6"
+
 
 
 if exercise == "1":
     tools = np.load("Images-npy/few256.npy")
-    dxtools = convolve2d(tools, deltax(), 'valid')
+    dxtools = convolve2d(tools, deltax(), 'valid')  #no  padding while valid
     dytools = convolve2d(tools, deltay(), 'valid')
 
     f = plt.figure()
@@ -395,16 +411,138 @@ if exercise == "5":
     
     plt.show()
 
-
+import time
 if exercise == "6":
-    testimage1 = np.load("Images-npy/triangle128.npy")
-    smalltest1 = binsubsample(testimage1)
+    # 加载实验图像
+    testimage = np.load("Images-npy/godthem256.npy")
 
-    testimage2 = np.load("Images-npy/houghtest256.npy")
-    smalltest2 = binsubsample(binsubsample(testimage2))
+    nrho_values = [50, 100, 180, 300]
+    ntheta_values = [50, 100, 180, 300]
 
-    print(smalltest1.shape[0])
-    print(smalltest1.shape[1])
+    # 测试结果存储
+    results = []
 
-    houghedgeline(smalltest1, 4, 0, 64, 180, 20, 0)
-   
+    for nrho, ntheta in zip(nrho_values, ntheta_values):
+        start_time = time.time()  # 开始计时
+        linepar, acc = houghedgeline(
+            pic=testimage,
+            scale=2,
+            gradmagnthreshold=10,
+            nrho=nrho,
+            ntheta=ntheta,
+            nlines=10,
+            verbose=False
+        )
+        elapsed_time = time.time() - start_time  # 计算时间
+        results.append((nrho, ntheta, elapsed_time))
+
+        # 打印累积器空间热图（用于分析）
+        plt.figure(figsize=(8, 6))
+        plt.title(f"Hough Accumulator (nrho={nrho}, ntheta={ntheta})")
+        plt.imshow(acc, cmap='hot', aspect='auto')
+        plt.colorbar(label="Accumulator Value")
+        plt.xlabel("Theta (radians)")
+        plt.ylabel("Rho (pixels)")
+        plt.tight_layout()
+        plt.show()
+
+    # 打印结果
+    for nrho, ntheta, elapsed_time in results:
+        print(f"nrho={nrho}, ntheta={ntheta}, time={elapsed_time:.2f}s")
+
+    # 参数配置
+    scale = 3
+    gradmagnthreshold = 8
+    nrho = 360
+    ntheta = 360
+    nlines = 25
+    verbose = 2  # 可视化模式
+
+    # 定义增量函数
+    increment_funcs = {
+        "Constant Increment (1)": lambda x: 1,
+        "Linear Increment (|∇L|)": lambda x: x,
+        "Squared Increment (|∇L|^2)": lambda x: x**2,
+        "Log Increment (log(1+|∇L|))": lambda x: np.log(1 + x)
+    }
+
+    # 提取边缘曲线
+    edge_curves = extractedge(testimage, scale, gradmagnthreshold, 'same')
+    magnitude = Lv(testimage, 'same')
+
+    # 可视化不同增量函数的效果
+    for name, func in increment_funcs.items():
+        print(f"Using {name}")
+        # 调用 Hough 变换
+        linepar, acc = houghline(
+            curves=edge_curves,
+            magnitude=magnitude,
+            nrho=nrho,
+            ntheta=ntheta,
+            threshold=gradmagnthreshold,
+            nlines=nlines,
+            verbose=False,
+            increment_func=func
+        )
+
+        # 提取累积器峰值
+        pos, values, _ = locmax8(acc)
+        strongest_peaks_idx = np.argsort(values)[-nlines:]  # 获取最强的 nlines 个峰值
+        strongest_pos = pos[strongest_peaks_idx]
+
+        # 可视化检测结果
+        plt.figure(figsize=(12, 6))
+
+        # **1. 原始图像和检测到的线条**
+        plt.subplot(1, 2, 1)
+        plt.title(f"Detected Lines ({name})")
+        plt.imshow(testimage, cmap='gray')
+
+        # 图像范围
+        height, width = testimage.shape
+        plt.xlim(0, width)
+        plt.ylim(height, 0)  # Y轴方向反转
+
+        # 绘制检测到的线条
+        colors = plt.cm.jet(np.linspace(0, 1, nlines))  # 为线条分配不同颜色
+        for idx, (rho, theta) in enumerate(linepar):
+            a = np.cos(theta)
+            b = np.sin(theta)
+            x0 = a * rho
+            y0 = b * rho
+            dx = width * (-b)
+            dy = height * a
+            x1, y1 = x0 - dx, y0 - dy
+            x2, y2 = x0 + dx, y0 + dy
+            plt.plot([x1, x2], [y1, y2], color=colors[idx], linewidth=2, label=f"Line {idx + 1}")
+
+        plt.legend(loc='lower left')
+
+        # **2. 累积器矩阵及峰值标记**
+        plt.subplot(1, 2, 2)
+        plt.title(f"Hough Accumulator with Peaks Highlighted ({name})")
+        plt.imshow(acc, cmap='hot', extent=[
+            -np.pi / 2, np.pi / 2,  # Theta 范围
+            np.sqrt(testimage.shape[0] ** 2 + testimage.shape[1] ** 2),  # Rho 正范围
+            -np.sqrt(testimage.shape[0] ** 2 + testimage.shape[1] ** 2)  # Rho 负范围
+        ], aspect='auto')
+        plt.colorbar(label="Accumulator Value")
+        plt.xlabel("Theta (radians)")
+        plt.ylabel("Rho (pixels)")
+
+        # 在累积器矩阵上标记峰值
+        for idx, (theta_idx, rho_idx) in enumerate(strongest_pos):
+            rho = (rho_idx / (nrho - 1)) * 2 * np.sqrt(testimage.shape[0] ** 2 + testimage.shape[1] ** 2) - \
+                  np.sqrt(testimage.shape[0] ** 2 + testimage.shape[1] ** 2)
+            theta = (theta_idx / (ntheta - 1)) * np.pi - np.pi / 2
+            plt.plot(theta, rho, 'o', color=colors[idx], markersize=8, label=f"Line {idx + 1}")
+
+        plt.legend(loc='upper right')
+
+        plt.tight_layout()
+        plt.show()
+
+
+
+
+
