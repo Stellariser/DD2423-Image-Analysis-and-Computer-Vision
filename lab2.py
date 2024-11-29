@@ -16,6 +16,9 @@ exercise = "6"
 
 def deltax():
     # Sobel operator
+    # A derivative is a highpass filter and will enhance noise.
+    # The first order derivative varies due to the position of the light source.
+    # Sobel operator add some smoothing, but do it in the opposite direction.
     dxmask = np.array([[-1,  0,  1],
                        [-2,  0,  2],
                        [-1,  0,  1]]) / 8
@@ -29,46 +32,59 @@ def deltay():
     return dymask
 
 def Lv(inpic, shape = 'same'):
+    # 梯度大小表示圖像像素值變化的強度，也就是像素值變化最劇烈的程度。
     Lx = convolve2d(inpic, deltax(), shape)
     Ly = convolve2d(inpic, deltay(), shape)
     return np.sqrt(Lx**2 + Ly**2)
 
 def Lvvtilde(inpic, shape = 'same'):
-        # Central difference approximations
-        dx = np.array([[0.5, 0, -0.5]])
-        dy = np.array([[0.5], [0], [-0.5]])
+    # Introduce in each point a local coordinate system (u, v) such that the v direction is parallel to the gradient direction
 
-        dxx = np.array([[1, -2, 1]])
-        dyy = np.array([[1], [-2], [1]])
+    # Lvvtilde = 0 indicates a zero-crossing point in the second-order directional derivative along the gradient direction. 
+    # This condition identifies locations where the intensity changes most rapidly, which are potential edge points.
+    # However, zero-crossings alone may include noise or irrelevant features that do not correspond to meaningful edges.
 
-        Lx = convolve2d(inpic, dx, shape)
-        Ly = convolve2d(inpic, dy, shape)
-        Lxx = convolve2d(inpic, dxx, shape) 
-        Lyy = convolve2d(inpic, dyy, shape)
-        Lxy = convolve2d(Lx, dy, shape)
+    # Central difference approximations
+    dx = np.array([[0.5, 0, -0.5]])
+    dy = np.array([[0.5], [0], [-0.5]])
 
-        return (Lx**2) * Lxx + 2 * Lx * Ly * Lxy + (Ly**2) * Lyy
+    dxx = np.array([[1, -2, 1]])
+    dyy = np.array([[1], [-2], [1]])
+
+    Lx = convolve2d(inpic, dx, shape)
+    Ly = convolve2d(inpic, dy, shape)
+    Lxx = convolve2d(inpic, dxx, shape) 
+    Lyy = convolve2d(inpic, dyy, shape)
+    Lxy = convolve2d(Lx, dy, shape)
+
+    return (Lx**2) * Lxx + 2 * Lx * Ly * Lxy + (Ly**2) * Lyy
 
 def Lvvvtilde(inpic, shape = 'same'):
-        # Central difference approximations
-        dx = np.array([[0.5, 0, -0.5]])
-        dy = np.array([[0.5], [0], [-0.5]])
+    # Introduce in each point a local coordinate system (u, v) such that the v direction is parallel to the gradient direction
 
-        dxx = np.array([[1, -2, 1]])
-        dyy = np.array([[1], [-2], [1]])
+    # Lvvvtilde < 0 ensures that the zero-crossing point corresponds to a concave curvature in the intensity variation.
+    # This means that the curvature decreases at this point, indicating a transition in intensity that is more likely to be a true edge.
+    # By combining this condition with Lvvtilde = 0, we can filter out noise-induced zero-crossings and retain only significant edges.
 
-        Lx = convolve2d(inpic, dx, shape)
-        Ly = convolve2d(inpic, dy, shape) 
-        Lxx = convolve2d(inpic, dxx, shape) 
-        Lyy = convolve2d(inpic, dyy, shape) 
-        Lxy = convolve2d(Lx, dy, shape)
+    # Central difference approximations
+    dx = np.array([[0.5, 0, -0.5]])
+    dy = np.array([[0.5], [0], [-0.5]])
 
-        Lxxx = convolve2d(Lxx, dx, shape)
-        Lyyy = convolve2d(Lyy, dy, shape)
-        Lxxy = convolve2d(Lxy, dx, shape)
-        Lxyy = convolve2d(Lxy, dy, shape)
+    dxx = np.array([[1, -2, 1]])
+    dyy = np.array([[1], [-2], [1]])
 
-        return (Lx**3) * Lxxx + 3 * (Lx**2) * Ly * Lxxy + 3 * Lx * (Ly**2) * Lxyy + (Ly**3) * Lyyy
+    Lx = convolve2d(inpic, dx, shape)
+    Ly = convolve2d(inpic, dy, shape) 
+    Lxx = convolve2d(inpic, dxx, shape) 
+    Lyy = convolve2d(inpic, dyy, shape) 
+    Lxy = convolve2d(Lx, dy, shape)
+
+    Lxxx = convolve2d(Lxx, dx, shape)
+    Lyyy = convolve2d(Lyy, dy, shape)
+    Lxxy = convolve2d(Lxy, dx, shape)
+    Lxyy = convolve2d(Lxy, dy, shape)
+
+    return (Lx**3) * Lxxx + 3 * (Lx**2) * Ly * Lxxy + 3 * Lx * (Ly**2) * Lxyy + (Ly**3) * Lyyy
 
 def extractedge(inpic, scale, threshold, shape):
     # Step 1: Smooth the input image using Gaussian smoothing
@@ -117,7 +133,7 @@ def houghline(curves, magnitude, nrho, ntheta, threshold, nlines = 20, verbose =
     # Step 1: Allocate accumulator space
     acc = np.zeros((nrho, ntheta))  # Accumulator array for (rho, theta)
     thetas = np.linspace(-np.pi/2, np.pi/2, ntheta)  # Theta values in radians
-    diag_len = np.sqrt(magnitude.shape[0]**2 + magnitude.shape[1]**2)  # Max rho
+    diag_len = np.sqrt(magnitude.shape[0]**2 + magnitude.shape[1]**2)  # 計算圖像的對角線長度（圖像的最大可能 rho 值）
     rhos = np.linspace(-diag_len, diag_len, nrho)  # Rho values
 
     # Step 2: Loop over all edge points
