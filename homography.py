@@ -12,10 +12,19 @@ def find_homography(pts1:np.ndarray, pts2:np.ndarray) -> np.ndarray:
         :returns np.ndarray H: a 3x3 array representing the homography matrix H.
 
     '''
+    n = pts1.shape[1]  # Number of points
+    A = []
+    for i in range(n):
+        x_a, y_a = pts1[:, i]
+        x_b, y_b = pts2[:, i]
+        A.append([x_a, y_a, 1, 0, 0, 0, -x_a * x_b, -y_a * x_b, -x_b])
+        A.append([0, 0, 0, x_a, y_a, 1, -x_a * y_b, -y_a * y_b, -y_b])
+    A = np.array(A)
 
-    #TODO: ADD YOUR CODE HERE
-    raise NotImplementedError("Homography estimation yet to be done. Complete the function find_homography and remove this line.")
-
+    # Solve for H using SVD
+    U, S, Vh = np.linalg.svd(A)
+    h = Vh[-1, :]  # Eigenvector corresponding to the smallest eigenvalue
+    H = h.reshape((3, 3))
     return H
 
 
@@ -64,8 +73,27 @@ def find_homography_RANSAC(pts1:np.ndarray, pts2:np.ndarray, niter:int = 100, th
     
     '''
 
-    #TODO: ADD YOUR CODE HERE
-    raise NotImplementedError("RANSAC Based homography yet to be done. Complete the function find_homography_RANSAC and remove this line.")
+    Hbest = None
+    ninliers = 0
+    errors = None
+
+    for _ in range(niter):
+        # Randomly sample 4 points
+        idx = np.random.choice(pts1.shape[1], 4, replace=False)
+        sampled_pts1 = pts1[:, idx]
+        sampled_pts2 = pts2[:, idx]
+
+        # Compute homography
+        H = find_homography(sampled_pts1, sampled_pts2)
+
+        # Count inliers
+        local_ninliers, local_errors = count_homography_inliers(H, pts1, pts2, thresh)
+
+        # Update the best homography if more inliers are found
+        if local_ninliers > ninliers:
+            Hbest = H
+            ninliers = local_ninliers
+            errors = local_errors
 
     return Hbest, ninliers, errors
 
@@ -108,7 +136,7 @@ if __name__=="__main__":
     synthetic_example(RANSAC = False)
 
     ## Task 2 example (from synthetic data)
-    #synthetic_example(RANSAC = True)
+    synthetic_example(RANSAC = True)
 
     ## Task 2 example (from real images)
-    #real_example()
+    real_example()

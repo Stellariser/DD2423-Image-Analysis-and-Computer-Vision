@@ -1,40 +1,25 @@
 import numpy as np
-from scipy.spatial import distance_matrix
 import matplotlib.pyplot as plt
-from Functions import *
-from gaussfft import gaussfft
+
+from homography import *
 
 
-def kmeans_segm(image, K, L, seed = 42):
-    """
-    Implement a function that uses K-means to find cluster 'centers'
-    and a 'segmentation' with an index per pixel indicating with 
-    cluster it is associated to.
-
-    Input arguments:
-        image - the RGB input image 
-        K - number of clusters
-        L - number of iterations
-        seed - random seed
-    Output:
-        segmentation: an integer image with cluster indices
-        centers: an array with K cluster mean colors
-    """ 
-    return segmentation, centers
+task = "1"
 
 
-def mixture_prob(image, K, L, mask):
-    """
-    Implement a function that creates a Gaussian mixture models using the pixels 
-    in an image for which mask=1 and then returns an image with probabilities for
-    every pixel in the original image.
+if task == "1":
+    num_run = 5
+    noise_level = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]
+    focal = 1000
 
-    Input arguments:
-        image - the RGB input image 
-        K - number of clusters
-        L - number of iterations
-        mask - an integer image where mask=1 indicates pixels used 
-    Output:
-        prob: an image with probabilities per pixel
-    """ 
-    return prob
+    for _ in range(num_run):
+        for i, noise in enumerate(noise_level):
+            pts1, pts2, H = generate_2d_points(num = 100, noutliers = 0, noise=noise, focal = focal)
+            # draw_matches(pts1, pts2)
+  
+            print("Run %s, Error rate: %s" % (_+1, noise))            
+            # print('True H =\n', H)
+            H2 = find_homography(pts1, pts2)
+            # print('Estimated H =\n', H2)
+            print('Error =', homography_error(H, H2, focal))
+            print("---------------------------------------")
