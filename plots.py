@@ -1,7 +1,10 @@
 import numpy as np
 import scipy
 import cv2
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+
 
 def draw_matches(pts1, pts2, img1 = None, img2 = None, width = 0):
     '''Shows matches pts1 and pts2 above the images img1,img2
