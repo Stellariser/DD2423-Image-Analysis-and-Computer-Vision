@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from homography import *
-from utils import generate_2d_points, extract_and_match_SIFT
+
 
 task = "2"
 
@@ -16,12 +16,12 @@ if task == "1":
     for _ in range(num_run):
         for noise in noise_level:
             pts1, pts2, H = generate_2d_points(num = 100, noutliers = 0, noise = noise, focal = focal)
-            draw_matches(pts1, pts2)
+            #draw_matches(pts1, pts2)
 
             print("Run %s, Error rate: %s" % (_+1, noise))
-            print('True H =\n', H)
+            # print('True H =\n', H)
             H2 = find_homography(pts1, pts2)
-            print('Estimated H =\n', H2)
+            # print('Estimated H =\n', H2)
             print('Error =', homography_error(H, H2, focal))
             print("---------------------------------------")
 
@@ -40,7 +40,34 @@ if task == "1":
             print("---------------------------------------")
 
 
+def find_homography_RANSAC(pts1, pts2, niter=1000, thresh=1.0):
+    Hbest = None
+    max_inliers = 0
+    best_errors = None
+
+    for _ in range(niter):
+        idx = np.random.choice(pts1.shape[1], 4, replace=False)
+        sampled_pts1 = pts1[:, idx]
+        sampled_pts2 = pts2[:, idx]
+
+        # 计算单应性矩阵
+        H = find_homography(sampled_pts1, sampled_pts2)
+
+        # 计算内点数量
+        ninliers, errors = count_homography_inliers(H, pts1, pts2, thresh)
+
+        # 更新最佳解
+        if ninliers > max_inliers:
+            max_inliers = ninliers
+            Hbest = H
+            best_errors = errors
+
+    return Hbest, max_inliers, best_errors
+
+
 if task == "2":
+
+    # 参数设置
     num_points = 100
     noutliers = 50
     noise = 0.5
