@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from homography import *
-
+from fmatrix import *
 
 task = "3"
 
@@ -40,34 +40,7 @@ if task == "1":
             print("---------------------------------------")
 
 
-def find_homography_RANSAC(pts1, pts2, niter=1000, thresh=1.0):
-    Hbest = None
-    max_inliers = 0
-    best_errors = None
-
-    for _ in range(niter):
-        idx = np.random.choice(pts1.shape[1], 4, replace=False)
-        sampled_pts1 = pts1[:, idx]
-        sampled_pts2 = pts2[:, idx]
-
-        # 计算单应性矩阵
-        H = find_homography(sampled_pts1, sampled_pts2)
-
-        # 计算内点数量
-        ninliers, errors = count_homography_inliers(H, pts1, pts2, thresh)
-
-        # 更新最佳解
-        if ninliers > max_inliers:
-            max_inliers = ninliers
-            Hbest = H
-            best_errors = errors
-
-    return Hbest, max_inliers, best_errors
-
-
 if task == "2":
-
-    # 参数设置
     num_points = 100
     noutliers = 50
     noise = 0.5
@@ -124,7 +97,8 @@ if task == "2":
     plt.grid()
     plt.show()
 
-    # 加载图像
+    # --------------------------------------------- #
+
     img1 = cv2.imread('images/books1.jpg', 0)  # 使用 books1 图像
     img2 = cv2.imread('images/books2.jpg', 0)  # 使用 books2 图像
     img3 = cv2.imread('images/img1.jpg', 0)  # 使用 img1.jpg
@@ -135,8 +109,8 @@ if task == "2":
     pts3, pts4 = extract_and_match_SIFT(img3, img4, num=1000)
 
     # 使用 RANSAC 计算单应性矩阵
-    niter = 10000  # 迭代次数设为 10000
-    threshold = 1.0  # 内点判断阈值
+    niter = 10000
+    threshold = 1.0
     Hbest, ninliers, errors = find_homography_RANSAC(pts1, pts2, niter=niter, thresh=threshold)
     Hbest2, ninliers2, errors2 = find_homography_RANSAC(pts1, pts2, niter=niter, thresh=threshold)
 
@@ -147,6 +121,7 @@ if task == "2":
     Hfinal2 = find_homography_RANSAC(pts3[:, inlier_mask], pts4[:, inlier_mask])[0]
 
     # 输出结果
+    print("For the experiment of books: ")
     print(f'RANSAC 内点数量 = {ninliers}/{pts1.shape[1]}')
     print(f'RANSAC 估计的 H =\n{Hbest}')
     print(f'最终估计的 H =\n{Hfinal}')
@@ -181,11 +156,8 @@ if task == "2":
     draw_homography(img1, img2, Hfinal)
     draw_homography(img3, img4, Hfinal2)
 
-from fmatrix import *
 
-if task == "3":
-
-    # Experiment parameters
+if task == "3":    
     num_features = 100
     noise_level = 0.5
     noutliers_range = range(0, 55, 1)
@@ -202,12 +174,12 @@ if task == "3":
         pts1, pts2, true_F = generate_3d_points(num=num_features, noutliers=noutliers, noise=noise_level, focal=focal,
                                                 spherical=True)
 
-        # 使用归一化估计 F
+        # 使用 normalization 估计 F
         F_normalized = find_fmatrix(pts1, pts2, normalize=True)
         error_normalized = fmatrix_error(true_F, F_normalized, focal)
         errors_with_normalization.append(error_normalized)
 
-        # 不使用归一化估计 F
+        # 不使用 normalization 估计 F
         F_non_normalized = find_fmatrix(pts1, pts2, normalize=False)
         error_non_normalized = fmatrix_error(true_F, F_non_normalized, focal)
         errors_without_normalization.append(error_non_normalized)
@@ -231,7 +203,8 @@ if task == "3":
     plt.tight_layout()
     plt.show()
 
-    # Parameters
+    # --------------------------------------------- #
+
     num_points = 100
     noutliers = 50
     noise_level = 0.5
@@ -267,9 +240,11 @@ if task == "3":
     plt.legend()
     plt.show()
 
+    # --------------------------------------------- #
+
     # 加载真实图像
-    img1 = cv2.imread('images/books1.jpg', 0)
-    img2 = cv2.imread('images/books2.jpg', 0)
+    img1 = cv2.imread('images/desk1.jpg', 0)
+    img2 = cv2.imread('images/desk2.jpg', 0)
 
     # 提取和匹配SIFT特征
     pts1, pts2 = extract_and_match_SIFT(img1, img2, num=1000)
@@ -281,8 +256,6 @@ if task == "3":
 
     # 可视化所有匹配点
     draw_matches(pts1, pts2, img1, img2)
-    plt.title("All Matches")
-    plt.show()
 
     # 可视化RANSAC筛选后的内点
     inliers_mask = errors < thresh
