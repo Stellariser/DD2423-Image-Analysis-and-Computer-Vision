@@ -68,14 +68,13 @@ def find_homography_RANSAC(pts1:np.ndarray, pts2:np.ndarray, niter:int = 100, th
         :param float thresh: the maximum error to consider a point as an inlier while evaluating a RANSAC iteration.
         :returns np.ndarray Hbest, int ninliers, np.ndarray errors:
             Hbest: a 3x3 matrix representing the best homography found.
-            ninliers: the number of inliers for the best homography found.
-            errors: a N_points array containing the errors for the best homography found; they are indexed as pts1 and pts2.
+            max_inliers: the number of inliers for the best homography found.
+            best_errors: a N_points array containing the errors for the best homography found; they are indexed as pts1 and pts2.
     
     '''
-
     Hbest = None
-    ninliers = 0
-    errors = None
+    max_inliers = 0
+    best_errors = None
 
     for _ in range(niter):
         # Randomly sample 4 points
@@ -87,15 +86,15 @@ def find_homography_RANSAC(pts1:np.ndarray, pts2:np.ndarray, niter:int = 100, th
         H = find_homography(sampled_pts1, sampled_pts2)
 
         # Count inliers
-        local_ninliers, local_errors = count_homography_inliers(H, pts1, pts2, thresh)
+        ninliers, errors = count_homography_inliers(H, pts1, pts2, thresh)
 
         # Update the best homography if more inliers are found
-        if local_ninliers > ninliers:
+        if ninliers > max_inliers:
             Hbest = H
-            ninliers = local_ninliers
-            errors = local_errors
+            max_inliers = ninliers
+            best_errors = errors
 
-    return Hbest, ninliers, errors
+    return Hbest, max_inliers, best_errors
 
 
 def synthetic_example(RANSAC = False):
