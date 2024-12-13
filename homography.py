@@ -22,8 +22,8 @@ def find_homography(pts1:np.ndarray, pts2:np.ndarray) -> np.ndarray:
     A = np.array(A)
 
     # Solve for H using SVD
-    U, S, Vh = np.linalg.svd(A)
-    h = Vh[-1, :]  # Eigenvector corresponding to the smallest eigenvalue
+    U, S, Vt = np.linalg.svd(A)
+    h = Vt[-1, :]  # Eigenvector corresponding to the smallest eigenvalue
     H = h.reshape((3, 3))
     return H
 

@@ -3,8 +3,9 @@ import matplotlib.pyplot as plt
 
 from homography import *
 from fmatrix import *
+from triangulation import *
 
-task = "3"
+task = "5"
 
 
 if task == "1":
@@ -16,12 +17,12 @@ if task == "1":
     for _ in range(num_run):
         for noise in noise_level:
             pts1, pts2, H = generate_2d_points(num = 100, noutliers = 0, noise = noise, focal = focal)
-            #draw_matches(pts1, pts2)
+            draw_matches(pts1, pts2)
 
             print("Run %s, Error rate: %s" % (_+1, noise))
-            # print('True H =\n', H)
+            print('True H =\n', H)
             H2 = find_homography(pts1, pts2)
-            # print('Estimated H =\n', H2)
+            print('Estimated H =\n', H2)
             print('Error =', homography_error(H, H2, focal))
             print("---------------------------------------")
 
@@ -203,8 +204,8 @@ if task == "3":
     plt.tight_layout()
     plt.show()
 
-    # --------------------------------------------- #
 
+if task == "4":
     num_points = 100
     noutliers = 50
     noise_level = 0.5
@@ -271,6 +272,29 @@ if task == "3":
     print(f"Inliers Ratio: {inliers_ratio:.2f}")
 
 
+if task == "5":
+    focal_range = range(10000, 70000, 5000)
+    rotation_angles = []
+    for focal in focal_range:
+        print(f"\nExperiment with focal length: {focal}")
+        rotation_angle = run_triangulation("images/books1.jpg", "images/books2.jpg", focal)
+        rotation_angles.append(rotation_angle)  # Append the rotation angle
 
+    plt.figure(figsize=(10, 6))
+    plt.plot(focal_range, rotation_angles, marker='o', label="Rotation Angle")
+    plt.title("Rotation Angle vs Focal Length")
+    plt.xlabel("Focal Length")
+    plt.ylabel("Rotation Angle (degrees)")
+    plt.grid(True)
+    plt.legend()
+    plt.show()
 
+    # Using different sets of images to test sensitivity to 3D scenes
+    image_pairs = [
+        ("images/books1.jpg", "images/books2.jpg"),  # Books (non-planar)
+        ("images/img1.jpg", "images/img2.jpg")   # Wall (planar-like)
+    ]
+    for img1, img2 in image_pairs:
+        print(f"\nExperiment with image pair: {img1} and {img2}")
+        run_triangulation(img1, img2, focal=1000)
 
