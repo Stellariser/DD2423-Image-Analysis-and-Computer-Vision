@@ -23,11 +23,19 @@ def find_fmatrix(pts1:np.ndarray, pts2:np.ndarray, normalize:bool = False) -> np
         std2 = np.std(pts2, axis=1)
         T2 = np.array([[1/std2[0], 0, -mean2[0]/std2[0]], [0, 1/std2[1], -mean2[1]/std2[1]], [0, 0, 1]])
         pts2 = T2 @ np.vstack((pts2, np.ones((1, np.size(pts2, 1)))))
- 
-    #TODO: ADD YOUR CODE HERE (and remove next line)
-    raise NotImplementedError("F matrix estimation yet to be done. Complete the function find_fmatrix and remove this line.")
 
-    # Undo the normalization to get F in the original coordinates
+    A = []
+    for i in range(pts1.shape[1]):
+        x1, y1 = pts1[0, i], pts1[1, i]
+        x2, y2 = pts2[0, i], pts2[1, i]
+        A.append([x2 * x1, x2 * y1, x2, y2 * x1, y2 * y1, y2, x1, y1, 1])
+    A = np.array(A)
+
+    # 利用 SVD 求解
+    U, S, Vt = np.linalg.svd(A)
+    F = Vt[-1, :].reshape(3, 3)
+
+    # 反归一化
     if normalize:
         F = T2.T @ F @ T1
     return F
@@ -85,10 +93,21 @@ def find_fmatrix_RANSAC(pts1:np.ndarray, pts2:np.ndarray, niter:int = 100, thres
             errors: a N_points array containing the errors for the best F matrix found; they are indexed as pts1 and pts2.
     
     '''
-    #TODO: ADD YOUR CODE HERE (and remove next line)
-    raise NotImplementedError("F matrix RANSAC based estimation yet to be done. Complete the function find_fmatrix_RANSAC and remove this line.")
+    best_F = None
+    max_inliers = 0
+    errors = None
 
-    return Fbest, ninliers, errors
+    for _ in range(niter):
+        idx = np.random.choice(pts1.shape[1], 8, replace=False)
+        F = find_fmatrix(pts1[:, idx], pts2[:, idx], normalize=True)
+        ninliers, err = count_fmatrix_inliers(F, pts1, pts2, thresh)
+
+        if ninliers > max_inliers:
+            best_F = F
+            max_inliers = ninliers
+            errors = err
+
+    return best_F, max_inliers, errors
 
 
 def synthetic_example(RANSAC=False):
@@ -126,7 +145,7 @@ if __name__=="__main__":
     synthetic_example(RANSAC = False)
 
     ## Task 4 example (from synthetic data)
-    #synthetic_example(RANSAC = True)
+    synthetic_example(RANSAC = True)
 
     ## Task 4 example (from real images)
-    #real_example()
+    real_example()

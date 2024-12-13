@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from homography import *
 
 
-task = "2"
+task = "3"
 
 
 if task == "1":
@@ -180,4 +180,124 @@ if task == "2":
     # 可视化融合后的图像
     draw_homography(img1, img2, Hfinal)
     draw_homography(img3, img4, Hfinal2)
+
+from fmatrix import *
+
+if task == "3":
+
+    # Experiment parameters
+    num_features = 100
+    noise_level = 0.5
+    noutliers_range = range(0, 55, 1)
+    focal = 1000
+    niter_ransac = 1000
+
+    # Results storage
+    errors_with_normalization = []
+    errors_without_normalization = []
+    errors_ransac = []
+
+    for noutliers in noutliers_range:
+        # 生成随机点
+        pts1, pts2, true_F = generate_3d_points(num=num_features, noutliers=noutliers, noise=noise_level, focal=focal,
+                                                spherical=True)
+
+        # 使用归一化估计 F
+        F_normalized = find_fmatrix(pts1, pts2, normalize=True)
+        error_normalized = fmatrix_error(true_F, F_normalized, focal)
+        errors_with_normalization.append(error_normalized)
+
+        # 不使用归一化估计 F
+        F_non_normalized = find_fmatrix(pts1, pts2, normalize=False)
+        error_non_normalized = fmatrix_error(true_F, F_non_normalized, focal)
+        errors_without_normalization.append(error_non_normalized)
+
+        # 使用 RANSAC 估计 F
+        F_ransac, _, _ = find_fmatrix_RANSAC(pts1, pts2, niter=niter_ransac, thresh=1.0)
+        error_ransac = fmatrix_error(true_F, F_ransac, focal)
+        errors_ransac.append(error_ransac)
+
+    # 可视化误差结果
+    plt.figure(figsize=(12, 6))
+    plt.plot(noutliers_range, errors_with_normalization, label='Normalized', marker='o')
+    plt.plot(noutliers_range, errors_without_normalization, label='Non-Normalized', marker='s')
+    plt.plot(noutliers_range, errors_ransac, label='RANSAC', marker='^')
+
+    plt.xlabel('Number of Outliers')
+    plt.ylabel('F Matrix Error')
+    plt.title('Comparison of F Matrix Estimation Methods')
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+
+    # Parameters
+    num_points = 100
+    noutliers = 50
+    noise_level = 0.5
+    focal_length = 1000
+    threshold = 1.0
+
+    # RANSAC iterations to test
+    iterations = [100, 500, 1000, 5000, 10000]
+    errors_ransac = []
+
+    for niter in iterations:
+        # Generate synthetic points
+        pts1, pts2, true_F = generate_3d_points(
+            num=num_points, noutliers=noutliers, noise=noise_level, focal=focal_length, spherical=True
+        )
+
+        # Compute F using RANSAC
+        F_ransac, ninliers, errors = find_fmatrix_RANSAC(pts1, pts2, niter=niter, thresh=threshold)
+
+        # Compute error
+        error_ransac = fmatrix_error(true_F, F_ransac, focal_length)
+        errors_ransac.append(error_ransac)
+
+        print(f"RANSAC iterations: {niter}, Inliers: {ninliers}/{num_points}, Error: {error_ransac:.4f}")
+
+    # Plot the results
+    plt.figure(figsize=(10, 6))
+    plt.plot(iterations, errors_ransac, marker="o", label="RANSAC Error")
+    plt.title("RANSAC Error vs. Iterations (Fundamental Matrix Estimation)")
+    plt.xlabel("Number of RANSAC Iterations")
+    plt.ylabel("Fundamental Matrix Error")
+    plt.grid(True)
+    plt.legend()
+    plt.show()
+
+    # 加载真实图像
+    img1 = cv2.imread('images/books1.jpg', 0)
+    img2 = cv2.imread('images/books2.jpg', 0)
+
+    # 提取和匹配SIFT特征
+    pts1, pts2 = extract_and_match_SIFT(img1, img2, num=1000)
+
+    # 使用RANSAC估计基础矩阵
+    niter = 10000  # RANSAC迭代次数
+    thresh = 1.0  # 对称极线距离的阈值
+    F_best, max_inliers, errors = find_fmatrix_RANSAC(pts1, pts2, niter=niter, thresh=thresh)
+
+    # 可视化所有匹配点
+    draw_matches(pts1, pts2, img1, img2)
+    plt.title("All Matches")
+    plt.show()
+
+    # 可视化RANSAC筛选后的内点
+    inliers_mask = errors < thresh
+    draw_matches(pts1[:, inliers_mask], pts2[:, inliers_mask], img1, img2)
+    plt.title("Inliers After RANSAC")
+    plt.show()
+
+    # 打印内点比例和分析
+    total_matches = pts1.shape[1]
+    inliers_ratio = max_inliers / total_matches
+    print(f"Total Matches: {total_matches}")
+    print(f"Number of Inliers: {max_inliers}")
+    print(f"Inliers Ratio: {inliers_ratio:.2f}")
+
+
+
+
 
